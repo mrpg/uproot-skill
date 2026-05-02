@@ -385,5 +385,24 @@ examples repository for similar apps before building from scratch.
 uv run uproot run    # or: uproot run
 ```
 
-Access the admin interface to create sessions and test. Use "Simulate responses"
-to run automated testing with your `simulate.js`.
+After building or modifying an app, start the server and tell the user clearly
+how to correctly run the uproot server, and how to access the admin area from
+the browser.
+
+**Do NOT** attempt to log in via curl, access player pages programmatically, test
+WebSocket connections, or interact with the running app from the command line
+unless the user specifically asks you to. The browser is the intended test
+interface; automated HTTP/WebSocket probing is fragile and unnecessary for normal
+development.
+
+## Handling Uncertainty
+
+If the AskUserQuestion tool is available, use it to ask the user whenever you
+encounter:
+- Uncertainties about requirements or intended behavior
+- Important missing details (e.g., number of players, payoff rules, round count)
+- Contradictions between what the user asked and what the code/examples show
+- Important design choices where multiple valid approaches exist
+
+Do not guess or assume — ask. A brief clarifying question saves far more time
+than building the wrong thing.
