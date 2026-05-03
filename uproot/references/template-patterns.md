@@ -75,7 +75,23 @@ Page Title
 {{ "Yes" if player.cooperated else "No" }}
 {{ value | to(1) }}                     {# Format to 1 decimal place #}
 {{ data | tojson }}                     {# JSON encode for JavaScript #}
+{{ C.INSTRUCTIONS | safe }}             {# Render experimenter HTML as markup #}
 ```
+
+### The `| safe` filter
+
+Use `| safe` when the value contains HTML that should be rendered, not escaped.
+This is appropriate for experimenter-defined content: constants with HTML markup,
+context properties that build formatted strings, or Python-generated HTML.
+
+```html
+{{ C.TASK_PROMPT | safe }}              {# Constant with <b>, <ul>, etc. #}
+{{ player.context.summary | safe }}     {# Computed HTML from Python #}
+```
+
+**Never use `| safe` on participant-typed values.** Any data that originates
+from player input (form fields, chat messages, free-text responses) must remain
+auto-escaped to prevent XSS. If in doubt, omit the filter.
 
 ## Template Functions
 

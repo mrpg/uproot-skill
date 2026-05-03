@@ -245,9 +245,43 @@ Key template variables:
 - `{{ player.others_in_group }}` - list of other group members
 - `{{ player.group.players }}` - all group members
 
+### The `| safe` filter
+
+When a template variable contains HTML that should be rendered as markup (not
+escaped), use `{{ variable | safe }}`. This is needed for experimenter-defined
+content such as instructions stored in constants, formatted prompts, or
+dynamically built HTML from Python code. **Only use `| safe` on values that
+come from the experimenter's code (e.g., `C.INSTRUCTIONS`, computed context
+properties, Python-generated HTML). Never use `| safe` on any value that could
+contain participant input** — player-typed text must always be auto-escaped by
+omitting the filter.
+
 Use `{% block head %}` for custom CSS and `{% block late %}` for late-loaded scripts.
 
 Bootstrap 5 and Alpine.js are available on every page out of the box.
+
+### UX and Accessibility
+
+Economic experiments depend on participants understanding instructions and
+interacting with the interface without confusion. Follow these principles:
+
+- **Use Bootstrap components properly.** Use `form-label`, `form-control`,
+  `form-check`, `btn`, `card`, `alert`, and grid classes (`row`, `col-*`)
+  as intended. Don't reinvent layout with custom CSS when Bootstrap provides it.
+- **Accessible forms.** Every input must have an associated `<label>` (uproot's
+  `{{ field() }}` handles this). For custom inputs, use `<label for="id">` or
+  `aria-label`. Group related radio buttons with `<fieldset>` and `<legend>`.
+- **Clear, concise instructions.** Write short sentences. Bold key terms or
+  amounts (`<strong>{{ C.ENDOWMENT }}</strong>`). Use lists for multi-step
+  instructions. Avoid jargon and academic language in participant-facing text.
+- **Visual hierarchy.** Use headings (`<h4>`, `<h5>`) to structure content.
+  Separate distinct sections with cards or spacing (`mb-3`, `mt-4`). Put the
+  primary action (the submit button) in a visually prominent position.
+- **Sufficient contrast and font size.** Stick with Bootstrap's default
+  typography. Don't use light gray text or small font sizes for important
+  content. Use `alert-info`, `alert-warning`, etc. for callouts.
+- **Responsive layout.** Use Bootstrap's grid so the experiment works on
+  different screen sizes. If in doubt, follow best practices.
 
 ## simulate.js
 
@@ -385,9 +419,16 @@ examples repository for similar apps before building from scratch.
 uv run uproot run    # or: uproot run
 ```
 
-After building or modifying an app, start the server and tell the user clearly
-how to correctly run the uproot server, and how to access the admin area from
-the browser.
+After building or modifying an app, tell the user clearly how to correctly run
+the uproot server, and how to access the admin area from the browser.
+
+**CRITICAL: Server lifecycle.** If you start the uproot server (e.g., to verify
+the app loads), you **must** kill it before returning control to the user. Never
+leave the server running in the background — it occupies the port and blocks
+future runs. Always run the server with a timeout (e.g., `timeout 15 uv run
+uproot run`) and confirm the process has terminated. If you used
+`run_in_background`, stop the process explicitly before finishing. The user will
+start the server themselves when they are ready to test.
 
 **Do NOT** attempt to log in via curl, access player pages programmatically, test
 WebSocket connections, or interact with the running app from the command line
