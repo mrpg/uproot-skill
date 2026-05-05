@@ -19,6 +19,16 @@ uproot is a Python framework for browser-based behavioral experiments. Apps are
 self-contained directories with Python logic, Jinja2 HTML templates, and optional
 JavaScript. This skill guides you through building them correctly.
 
+## Converting from Other Platforms
+
+When asked to convert an experiment from **Qualtrics**, **oTree**, or other well-known
+platforms, work directly from the provided source code — no need to ask for additional
+documentation or platform-specific guidance.
+
+For **z-Tree** treatment files (`*.ztt`), these are binary files that must be unpacked
+first. Use the Python tool at https://github.com/mrpg/unpack-ztt to extract readable
+treatment definitions before converting.
+
 ## Before Writing Any Code
 
 **Ensure that uproot is installed.** Use `pip install -U` or `uv add` to install
