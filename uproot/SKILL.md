@@ -215,6 +215,10 @@ def new_session(session):
     session.model = um.create_model(session, tag="data")
 ```
 
+Optional app-level helpers:
+- `digest(session)` can return admin-facing summary data for monitoring.
+- `pipeline(session)` can return derived rows, often a list of dictionaries, for custom exports or analysis.
+
 ## HTML Templates
 
 Read `references/template-patterns.md` for the full reference. The essentials:
