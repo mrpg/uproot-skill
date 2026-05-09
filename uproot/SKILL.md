@@ -25,6 +25,9 @@ When asked to convert an experiment from **Qualtrics**, **oTree**, or other well
 platforms, work directly from the provided source code — no need to ask for additional
 documentation or platform-specific guidance.
 
+You must NEVER attempt to implement a "compatibility layer", or shims, or similar, when
+converting experiments. You MUST ALWAYS reimplement from scratch using best practices!
+
 For **z-Tree** treatment files (`*.ztt`), these are binary files that must be unpacked
 first. Use the Python tool at https://github.com/mrpg/unpack-ztt to extract readable
 treatment definitions before converting.
