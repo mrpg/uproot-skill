@@ -84,9 +84,9 @@ my_app/
 └── README.md        # Loading instructions
 ```
 
-Apps are the constituent parts of projects. Create projects with `(uv run) uproot setup proj --minimal`
-and apps with `(uv run) uproot new --minimal`. View `(uv run) uproot --help` if necessary. Avoid creating
-apps or projects manually.
+Apps are the constituent parts of projects. Create projects with `(uv run) uproot setup $PROJECT --minimal`
+and apps with `(uv run) uproot new --minimal $APP`. View `(uv run) uproot --help` if necessary. Avoid creating
+apps or projects manually. Set $PROJECT and $APP to appropriate project and app names.
 
 ## The __init__.py File
 
