@@ -88,6 +88,8 @@ Apps are the constituent parts of projects. Create projects with `(uv run) uproo
 and apps with `(uv run) uproot new --minimal $APP`. View `(uv run) uproot --help` if necessary. Avoid creating
 apps or projects manually. Set $PROJECT and $APP to appropriate project and app names.
 
+You must ALWAYS create projects in new subdirectories. NEVER pollute the pwd.
+
 ## The __init__.py File
 
 ### Required LGPL notice
