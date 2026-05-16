@@ -181,7 +181,7 @@ def digest(session):
 TREATMENTS = [1, 2, 3]
 
 def new_player(player):
-    player.treatment = random.choice(TREATMENTS)
+    player.treatment = rng().choice(TREATMENTS)
 ```
 
 For balanced assignment, follow the `treatments_balanced` example and assign the

@@ -212,11 +212,15 @@ Advanced constructs (read `references/page-ordering.md`):
 ```python
 def new_player(player):
     player.counter = 0
-    player.treatment = random.choice([1, 2])
+    player.treatment = rng().choice([1, 2])
 
 def new_session(session):
     session.model = um.create_model(session, tag="data")
 ```
+
+**Note**: `rng` is exported from uproot.smithereens, and returns a random.Random object initialized with
+safe cryptographic randomness. In most experiments, `rng()` should be used whenever a random.Random object
+could be used, as it is good practice.
 
 Optional app-level helpers:
 - `digest(session)` can return admin-facing summary data for monitoring.
