@@ -38,9 +38,10 @@ treatment definitions before converting.
 `uproot-science @ git+https://github.com/mrpg/uproot.git@main`. The use of `uv` is
 recommended, if available.
 
-**Always explore existing examples first.** The uproot-examples repository contains
-40+ apps covering most common experimental paradigms. The best approach is to find a
-similar one and adapt it. Clone it if not already available:
+**Always download and read the examples first.** The uproot-examples repository
+contains 40+ apps covering most common experimental paradigms. Clone it if not
+already available, then **ingest all the code** — this is cheap and produces
+dramatically better results:
 
 ```bash
 git clone https://github.com/mrpg/uproot-examples /tmp/uproot-examples
@@ -48,13 +49,16 @@ git clone https://github.com/mrpg/uproot-examples /tmp/uproot-examples
 
 ### Research workflow
 
-1. **Read the README.md** in uproot-examples for the full table of apps with
-   descriptions and difficulty ratings.
+1. **Read ALL Python and HTML files across the entire examples repo.** Run
+   something like `cat /tmp/uproot-examples/*/*.py /tmp/uproot-examples/*/*.html`
+   to ingest every app's `__init__.py` and templates in one pass. Also read
+   `README.md` and any other files (e.g., `simulate.js`, `.css`) when relevant.
+   This gives you the full picture of uproot idioms, patterns, and conventions —
+   do not skip this step or read only a few files.
 2. **Read `input_elements/__init__.py`** before building any app that uses form
    fields. It is the canonical showcase of every field type uproot provides.
-3. **Read 2-3 similar example apps** completely (`__init__.py` + all `.html` files)
-   to understand patterns and alternatives.
-4. **Search across the codebase** for specific patterns rather than guessing.
+   (You will have already read it in step 1, but pay special attention to it.)
+3. **Search across the codebase** for specific patterns rather than guessing.
    Read `references/search-patterns.md` for common search terms.
 
 ### When examples aren't enough
@@ -418,7 +422,7 @@ Template: `{{ chat(session.chat) }}`
 
 ## Checklist for New Apps
 
-1. Copy a similar existing app as your starting point
+1. Ingest ALL example code (see Research workflow above) and copy a similar existing app as your starting point
 2. Preserve the required uproot LGPL notice and include `uproot_license.txt`
 3. Define `DESCRIPTION` and `page_order`
 4. Create matching `.html` templates for each Page class (name must match exactly)
