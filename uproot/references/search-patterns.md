@@ -51,9 +51,12 @@ rg "handle_stealth_fields" -g "*.py"
 ```bash
 rg "@live" -g "*.py"
 rg "notify\(" -g "*.py"
+rg "send_to\(|send_to_one\(" -g "*.py"
+rg "reload\(" -g "*.py"
+rg "spawn\(" -g "*.py"
 rg "uproot.invoke" -g "*.html" -g "*.js"
 rg "uproot.receive" -g "*.html" -g "*.js"
-rg "send_to\(" -g "*.py"
+rg "onCustomEvent" -g "*.html" -g "*.js"
 ```
 
 ## Randomization
@@ -105,8 +108,9 @@ rg "chat\(" -g "*.html"
 rg "def show" -g "*.py"
 rg "may_proceed" -g "*.py"
 rg "allow_back" -g "*.py"
-rg "move_to_page|move_to_end" -g "*.py"
+rg "move_to_page|move_to_end|transition_to_page|transition_to_end" -g "*.py"
 rg "NoshowPage" -g "*.py"
+rg "def page_order" -g "*.py"
 ```
 
 ## Dropout Handling
@@ -119,6 +123,9 @@ rg "handle_dropout|dropout" -g "*.py"
 ```bash
 rg "def new_player" -g "*.py"
 rg "def new_session" -g "*.py"
+rg "def restart" -g "*.py"
+rg "def language" -g "*.py"
+rg "def api2" -g "*.py"
 ```
 
 ## Template Patterns
@@ -131,6 +138,7 @@ rg "uproot.currentPage" -g "*.js"
 
 ## JavaScript Simulation
 ```bash
+rg "uproot.simulate.on" -g "*.js"
+rg "sim.fill\|sim.choose\|sim.submit" -g "*.js"
 rg "uproot.submit" -g "*.js"
-rg 'I\("' -g "*.js"
 ```

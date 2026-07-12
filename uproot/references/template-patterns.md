@@ -38,7 +38,7 @@ Page Title
 ### Variables
 ```html
 {{ player.name }}
-{{ player.payoff }}
+{{ player.payoff | fmtnum(places=2) }}
 {{ player.get("field_name") }}          {# Safe access, returns None if missing #}
 {{ C.ENDOWMENT }}
 {{ app.LABELS.key }}
@@ -73,7 +73,7 @@ Page Title
 ### Inline expressions
 ```html
 {{ "Yes" if player.cooperated else "No" }}
-{{ value | to(1) }}                     {# Format to 1 decimal place #}
+{{ value | fmtnum(places=1) }}          {# Format to 1 decimal place #}
 {{ data | tojson }}                     {# JSON encode for JavaScript #}
 {{ C.INSTRUCTIONS | safe }}             {# Render experimenter HTML as markup #}
 ```
@@ -101,6 +101,7 @@ auto-escaped to prevent XSS. If in doubt, omit the filter.
 {{ errors() }}                          {# Display form errors #}
 {{ chat(session.chat) }}                {# Render chat widget #}
 {{ appstatic("script.js") }}            {# URL for static file in app dir #}
+{{ projectstatic("shared.js") }}        {# URL for project-level static file #}
 {% include "app_name/partial.html" %}   {# Include another template #}
 ```
 

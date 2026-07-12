@@ -65,6 +65,8 @@ Real-time server communication without page reloads:
 
 ### Basic pattern
 
+Live methods can be sync or async:
+
 ```python
 class TaskPage(Page):
     @classmethod
@@ -72,11 +74,11 @@ class TaskPage(Page):
         return player.done
 
     @live
-    async def get_state(page, player):
+    def get_state(page, player):
         return {"current_trial": player.current, "total": NUM_TRIALS}
 
     @live
-    async def submit_answer(page, player, answer: str, rt: float):
+    def submit_answer(page, player, answer: str, rt: float):
         correct = answer == player.expected
         player.current += 1
         player.done = player.current >= NUM_TRIALS
@@ -141,25 +143,26 @@ function taskApp() {
 Push data from server to specific players or groups:
 
 ```python
-from uproot.smithereens import notify
-
 # Notify the other player in a 2-player group
 notify(player, player.other_in_group, {"type": "update", "value": 42})
 
-# In the client
+# Notify a single player by reference
+send_to_one(target_player, data={"type": "update"})
+
+# Broadcast to all session players
+send_to(session.players, data={"type": "refresh"})
+
+# Force a player to reload their page
+reload(player)
+```
+
+Client-side receiving:
+```javascript
 uproot.receive = (data) => {
     if (data.type === "update") {
         document.getElementById("value").textContent = data.value;
     }
 };
-```
-
-For session-wide broadcast:
-```python
-from uproot.smithereens import send_to
-
-def broadcast(session, data):
-    send_to(session.players, data=data)
 ```
 
 Use `event` when you want a custom browser event instead of `uproot.receive`:
@@ -168,9 +171,16 @@ Use `event` when you want a custom browser event instead of `uproot.receive`:
 notify(player, player.session.players, data, event="Notified", where=...)
 ```
 
+Listen for custom events:
+```javascript
+uproot.onCustomEvent("Notified", (event) => {
+    // event.detail.data contains the payload
+});
+```
+
 ## Background Tasks
 
-Run async tasks that continue independently of page loads:
+Run async tasks that continue independently of page loads using `spawn`:
 
 ```python
 import asyncio
@@ -188,8 +198,12 @@ class Setup(NoshowPage):
     def after_always_once(page, player):
         if player.session.get("counter") is None:
             player.session.counter = 0
-            asyncio.create_task(periodic_update(player.session))
+            spawn(periodic_update(player.session))
 ```
+
+Use `spawn()` (from `uproot.smithereens`) instead of `asyncio.create_task()`
+directly. For tasks that must survive server restarts, define an `async def
+restart()` callback at module level to re-create them.
 
 ## Chat Integration
 
@@ -228,8 +242,6 @@ def new_session(session):
 Monitor for player disconnection:
 
 ```python
-from uproot.smithereens import watch_for_dropout, move_to_end
-
 def new_player(player):
     watch_for_dropout(player, handle_dropout)
 
@@ -237,6 +249,8 @@ async def handle_dropout(player):
     player.dropout = True
     move_to_end(player)
 ```
+
+Mark a player as dropped without a callback: `mark_dropout(player.pid)`
 
 ## Custom Group Creation
 
@@ -262,23 +276,19 @@ create_group(session, players_list)
 
 ## Randomization Utilities
 
+Use `rng()` for experiment randomization. It supplies a separately seeded
+`random.Random` instance. Do not use Python's process-global random generator.
+
 ```python
-from random import Random
+items = list(item_list)
+rng().shuffle(items)
 
-from uproot.smithereens import Random as RandomPages
-
-
-def shuffled(iterable, *, seed=None):
-    result = list(iterable)
-    Random(seed).shuffle(result)
-    return result
-
-# Deterministic shuffle (seeded by player)
-items = shuffled(item_list, seed=hash(player.name + "task"))
-
-# Random page ordering
-page_order = [RandomPages(PageA, PageB, PageC)]
+# Random page ordering (Random is exported from uproot.smithereens)
+page_order = [Random(PageA, PageB, PageC)]
 ```
+
+Store any assigned treatment, order, or draw on the player before it affects the
+participant flow, so it remains stable on refresh and can be exported.
 
 ## Stealth Fields (Sensitive Data)
 
@@ -329,10 +339,17 @@ class QuizPage(Page):
     stealth_fields = [f"q{i}" for i, _ in enumerate(QUIZ)]
 
     @classmethod
+    def before_once(page, player):
+        player.quiz_choices = [
+            rng().sample(answers, k=len(answers))
+            for _, answers in QUIZ
+        ]
+
+    @classmethod
     def fields(page, player):
         result = {}
         for i, (question, answers) in enumerate(QUIZ):
-            choices = [(sha256(a), a) for a in shuffled(answers, seed=hash(player.name + f"q{i}"))]
+            choices = [(sha256(a), a) for a in player.quiz_choices[i]]
             result[f"q{i}"] = RadioField(label=question, choices=choices)
         return result
 
@@ -346,14 +363,10 @@ class QuizPage(Page):
 
 ## Session Settings
 
-Read configurable parameters set in the admin interface:
+Read configurable parameters set in the admin interface with the built-in
+helper. Treat settings as read-only:
 
 ```python
-def get_setting(session, key, default):
-    if session.settings and key in session.settings:
-        return session.settings[key]
-    return default
-
 class Setup(NoshowPage):
     @classmethod
     def after_always_once(page, player):
@@ -386,8 +399,30 @@ from uproot.i18n import load as load_all
 
 load_all("my_app/")
 
+def language(player):
+    return player.language or "en"
+
 def new_player(player):
     player.language = "en"
 ```
 
 See the `multilanguage` example for the full pattern with language switching.
+
+## Utility Functions
+
+These are all exported from `uproot.smithereens`:
+
+- `get_setting(session, key, default=None)` - read admin-configured session settings
+- `safe(html_string)` - mark a string as HTML-safe (equivalent to `Markup`)
+- `data_uri(data: bytes)` - encode binary data as a `data:` URI
+- `read_csv(path)` - read a CSV file into a list of dicts
+- `append_to_csv(path, data)` - append a dict as a row to a CSV file
+- `reload(player)` - force-reload a player's browser page
+- `spawn(coro)` - schedule an async coroutine as a background task
+- `transition_to_page(player, page_class)` - move player to a specific page
+- `transition_to_end(player)` - move player to the end of the experiment
+- `move_to_page(player, page_class)` - move player to a page (legacy alias)
+- `move_to_end(player)` - move player to the end (legacy alias)
+- `add_to_group(group, player)` - add a player to an existing group
+- `identify(obj)` - get the identifier for a player/group/session/model
+- `fmtnum` - number formatter for Python and templates (`| fmtnum(...)`)

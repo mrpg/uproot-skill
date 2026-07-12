@@ -62,6 +62,15 @@ class WaitForEveryone(SynchronizingWait):
         create_groups(session, [list_of_player_groups])
 ```
 
+Custom wait condition (override which players must arrive):
+
+```python
+class WaitForSubset(SynchronizingWait):
+    @classmethod
+    def wait_for(page, player):
+        return [p.pid for p in player.group.players if p.is_active]
+```
+
 ## Lifecycle Methods
 
 Most page methods use `@classmethod` and receive `page` (the class) as their
@@ -124,11 +133,11 @@ async def fields(page, player):
 ```python
 @classmethod
 def validate(page, player, data):
-    """Return a string error message, a dict of field->error, or None."""
+    """Return a string, list of strings, dict of field->error(s), or None."""
     if data.get("min_val") > data.get("max_val"):
         return "Minimum must be less than maximum."
     # Or field-specific errors:
-    return {"min_val": "Too high", "max_val": "Too low"}
+    return {"min_val": "Too high", "max_val": ["Error 1", "Error 2"]}
 ```
 
 ### Stealth fields
@@ -211,11 +220,11 @@ class TaskPage(Page):
 
 ### Live methods (WebSocket)
 
-For real-time interaction without page reloads:
+For real-time interaction without page reloads. Can be sync or async:
 
 ```python
 @live
-async def increment(page, player):
+def increment(page, player):
     player.counter += 1
     return player.counter
 

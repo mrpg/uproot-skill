@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Uproot Experiments"
+  short_description: "Build and debug Uproot behavioral studies"
+  default_prompt: "Use $uproot to build or update this behavioral experiment."

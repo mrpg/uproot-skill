@@ -34,46 +34,53 @@ treatment definitions before converting.
 
 ## Before Writing Any Code
 
-**Ensure that uproot is installed.** Use `pip install -U` or `uv add` to install
-`uproot-science @ git+https://github.com/mrpg/uproot.git@main`. The use of `uv` is
-recommended, if available.
-
-**Always download and read the examples first.** The uproot-examples repository
-contains 40+ apps covering most common experimental paradigms. Clone it if not
-already available, then **ingest all the code** — this is cheap and produces
-dramatically better results:
+For an existing project, preserve its pinned dependency and deployment choices.
+For a new project, install uproot with the supported project scaffold command:
 
 ```bash
-git clone https://github.com/mrpg/uproot-examples /tmp/uproot-examples
+uv run --with uproot-science uproot setup my_project --minimal
 ```
+
+If `uv` is unavailable, follow the framework's pip installation guide. Do not
+install directly from an unreleased Git branch unless the user explicitly asks.
 
 ### Research workflow
 
-1. **Read ALL Python and HTML files across the entire examples repo.** Run
-   something like `cat /tmp/uproot-examples/*/*.py /tmp/uproot-examples/*/*.html`
-   to ingest every app's `__init__.py` and templates in one pass. Also read
-   `README.md` and any other files (e.g., `simulate.js`, `.css`) when relevant.
-   This gives you the full picture of uproot idioms, patterns, and conventions —
-   do not skip this step or read only a few files.
-2. **Read `input_elements/__init__.py`** before building any app that uses form
-   fields. It is the canonical showcase of every field type uproot provides.
-   (You will have already read it in step 1, but pay special attention to it.)
-3. **Search across the codebase** for specific patterns rather than guessing.
-   Read `references/search-patterns.md` for common search terms.
+1. Read the target project's `main.py`, `pyproject.toml`, and local agent
+   instructions when they exist. Preserve their dependency and deployment choices.
+2. **Always download the examples repository** if it is not already available:
 
-### When examples aren't enough
+   ```bash
+   git clone https://github.com/mrpg/uproot-examples /tmp/uproot-examples
+   ```
 
-Clone the uproot documentation and/or source code:
+   Read its `README.md` and `main.py`, then study two or three relevant complete
+   examples: their `__init__.py`, templates, and `simulate.js`. Copy a close
+   pattern only when its semantics match.
+3. Read `input_elements/__init__.py` before adding form fields. Search examples
+   with `rg` for the exact feature instead of guessing; see
+   `references/search-patterns.md`.
+4. If examples do not settle an API detail, download and search the documentation:
 
-```bash
-git clone https://github.com/mrpg/uproot-docs /tmp/uproot-docs
-git clone https://github.com/mrpg/uproot /tmp/uproot
-```
+   ```bash
+   git clone https://github.com/mrpg/uproot-docs /tmp/uproot-docs
+   ```
+
+5. For advanced implementation, lifecycle, or client-API questions that remain
+   unclear, download the framework source and inspect the relevant implementation:
+
+   ```bash
+   git clone https://github.com/mrpg/uproot /tmp/uproot
+   ```
+
+Use existing local clones instead of downloading duplicates. The framework source
+is authoritative for signatures and lifecycle behaviour.
 
 Key source files (under `src/uproot/` in the uproot repo):
 - `smithereens.py` - Main public helper imports, `@live`, grouping, notifications, page-order operators
 - `fields.py` - All field type definitions
 - `_static/uproot.js` - Client-side JavaScript API
+- `_static/simulate.js` - Simulation helper API (`uproot.simulate`)
 - `types.py` - Page base classes and lifecycle enforcement
 
 ## App Structure
@@ -88,9 +95,11 @@ my_app/
 └── README.md        # Loading instructions
 ```
 
-Apps are the constituent parts of projects. Create projects with `(uv run) uproot setup $PROJECT --minimal`
-and apps with `(uv run) uproot new --minimal $APP`. View `(uv run) uproot --help` if necessary. Avoid creating
-apps or projects manually. Set $PROJECT and $APP to appropriate project and app names.
+Apps are parts of projects. For a new project, use the supported scaffold command
+from the documentation, for example `uv run --with uproot-science uproot setup
+my_project --minimal`; then work inside that directory. Use `uproot --help` and
+`uproot new --help` for the installed version before scaffolding an additional app.
+Do not create a project in an existing project's root or overwrite user files.
 
 You must ALWAYS create projects in new subdirectories. NEVER pollute the pwd.
 
@@ -206,6 +215,14 @@ class Sync(SynchronizingWait):
 page_order = [GroupPlease, Decision, Sync, Results]
 ```
 
+`page_order` can also be a function for per-player dynamic sequences:
+```python
+def page_order(player: PlayerType) -> list[Any]:
+    if player.treatment == 1:
+        return [Instructions, TaskA, Results]
+    return [Instructions, TaskB, Results]
+```
+
 Advanced constructs (read `references/page-ordering.md`):
 - `Rounds(Page1, Page2, n=5)` - repeat a block n times
 - `Repeat(Page1, Page2)` - repeat while `player.add_round` is true
@@ -228,9 +245,14 @@ def new_session(session):
 safe cryptographic randomness. In most experiments, `rng()` should be used whenever a random.Random object
 could be used, as it is good practice.
 
-Optional app-level helpers:
-- `digest(session)` can return admin-facing summary data for monitoring.
-- `pipeline(session)` can return derived rows, often a list of dictionaries, for custom exports or analysis.
+Optional app-level callbacks:
+- `digest(session)` returns admin-facing summary data (dict or list) for monitoring.
+- `pipeline(session)` returns a `list[dict[str, Any]]` of derived rows for export.
+- `language(player)` returns the locale string for this player (for i18n).
+- `async def restart()` runs on server restart (e.g., to re-create background tasks).
+- `async def api2(session, request)` defines an unauthenticated HTTP endpoint.
+  Treat its request input as public and untrusted; never expose secrets or
+  participant data through it.
 
 ## HTML Templates
 
@@ -247,7 +269,7 @@ Page Title
 
 {% block main %}
 
-<p>Your endowment is {{ C.ENDOWMENT }}.</p>
+<p>Your endowment is {{ C.ENDOWMENT | fmtnum(places=2) }}.</p>
 
 {{ field(form.amount) }}
 {{ errors() }}
@@ -260,6 +282,7 @@ Key template functions:
 - `{{ fields() }}` - render all form fields
 - `{{ errors() }}` - display validation errors
 - `{{ appstatic("file.js") }}` - URL for static files in the app directory
+- `{{ projectstatic("file.js") }}` - URL for project-level static files
 - `{% include "app_name/partial.html" %}` - include another template
 - `{{ chat(session.chat) }}` - render a chat widget
 
@@ -284,6 +307,20 @@ contain participant input** — player-typed text must always be auto-escaped by
 omitting the filter.
 
 Use `{% block head %}` for custom CSS and `{% block late %}` for late-loaded scripts.
+
+Additional blocks: `pre_container`, `main_full_width` (no container),
+`main2`/`main2_full_width`/`main3` (extra content sections),
+`pre_main`/`post_main`, `pre_form`/`form_start`/`form_end`,
+`header_start`/`header_end`, `footer`, `late2`.
+
+Template switches (set as Jinja2 variables):
+- `buttons = false` - hide the default Next button
+- `disable_bootstrap = true` - omit Bootstrap CSS/JS
+- `disable_uproot_fonts = true` - omit default web fonts
+- `disable_tabular_numbers = true` - omit the tabular-number font stylesheet
+- `disable_terms = true` - omit the terms script
+- `disable_auto_start = true` - don't auto-initialize uproot JS
+- `disable_connection_lost_modal = true` - suppress connection-lost modal
 
 Bootstrap 5 and Alpine.js are available on every page out of the box.
 
@@ -313,27 +350,49 @@ interacting with the interface without confusion. Follow these principles:
 ## simulate.js
 
 Every app should include a `simulate.js` for automated testing. It runs on player
-pages in sessions created with "Simulate responses" enabled:
+pages in sessions created with "Simulate responses" enabled. Use the
+`uproot.simulate` API — it provides chainable helpers for filling fields,
+choosing radio buttons, and submitting:
 
 ```javascript
-if (uproot.currentPage == "my_app/Decision") {
-    I("amount").value = Math.floor(Math.random() * 101);
-    uproot.submit();
-}
-
-if (uproot.currentPage == "my_app/Results") {
-    // optionally auto-advance
-}
+uproot.simulate.on("my_app/Decision", (sim) => {
+    sim.fill("amount", sim.integer(0, 100)).submit();
+});
 ```
 
 For radio buttons:
 ```javascript
-if (uproot.currentPage == "my_app/Choice") {
-    const radios = document.querySelectorAll('input[type="radio"]');
-    const idx = Math.floor(Math.random() * radios.length);
-    radios[idx].checked = true;
-    uproot.submit();
-}
+uproot.simulate.on("my_app/Choice", (sim) => {
+    sim.choose("choice", sim.random(["A", "B", "C"])).submit();
+});
+```
+
+For multiple fields:
+```javascript
+uproot.simulate.on("my_app/Survey", (sim) => {
+    sim.fill({
+        response: sim.random(["red", "green", "blue"]),
+        reaction_time_ms: String(sim.integer(250, 1200)),
+    }).submit();
+});
+```
+
+Available `sim` methods:
+- `sim.fill(name, value)` or `sim.fill({name: value, ...})` - set input values
+- `sim.choose(name, value)` - select a radio button or dropdown option
+- `sim.check(name)` / `sim.uncheck(name)` - toggle checkboxes
+- `sim.chooseAnyRadio()` - pick a random radio button on the page
+- `sim.oneOf(name, values)` - choose a random value from an array
+- `sim.random(array)` - return a random element from an array
+- `sim.integer(min, max)` - return a random integer in [min, max]
+- `sim.submit()` - submit the page
+- All methods except `random`/`integer` return `sim` for chaining
+
+Pages without form fields (e.g., results pages) can auto-advance:
+```javascript
+uproot.simulate.on("my_app/Results", (sim) => {
+    sim.submit();
+});
 ```
 
 ## Registration
@@ -348,18 +407,18 @@ Add to the Apps table in `README.md` with description and difficulty rating.
 ## Field Types
 
 Read `references/field-types.md` for the complete reference. Summary of available
-types: BooleanField, DateField, DecimalField, DecimalRangeField, EmailField,
-FileField, IntegerField, LikertField, RadioField, SelectField, StringField,
-TextAreaField, BoundedChoiceField, IBANField.
+types: BICField, BooleanField, BoundedChoiceField, DateField, DecimalField,
+DecimalRangeField, EmailField, FileField, IBANField, IntegerField, LikertField,
+RadioField, SelectField, StringField, TextAreaField.
 
 ## Live Methods (WebSocket)
 
-For real-time interaction without page reloads:
+For real-time interaction without page reloads. Live methods can be sync or async:
 
 ```python
 class MyPage(Page):
     @live
-    async def do_something(page, player, value: int):
+    def do_something(page, player, value: int):
         player.data = value
         return {"status": "ok", "new_value": player.data}
 ```
@@ -422,7 +481,7 @@ Template: `{{ chat(session.chat) }}`
 
 ## Checklist for New Apps
 
-1. Ingest ALL example code (see Research workflow above) and copy a similar existing app as your starting point
+1. Study the relevant examples (see Research workflow above) and adapt a similar existing app where appropriate
 2. Preserve the required uproot LGPL notice and include `uproot_license.txt`
 3. Define `DESCRIPTION` and `page_order`
 4. Create matching `.html` templates for each Page class (name must match exactly)

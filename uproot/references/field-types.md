@@ -107,6 +107,12 @@ IBAN input with validation.
 IBANField(label="Your IBAN")
 ```
 
+### BICField
+BIC/SWIFT code input.
+```python
+BICField(label="Your BIC")
+```
+
 ### BoundedChoiceField
 Choice field with configurable bounds on how many options can be selected.
 ```python
