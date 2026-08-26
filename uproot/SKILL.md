@@ -345,10 +345,10 @@ interacting with the interface without confusion. Follow these principles:
   typography. Don't use light gray text or small font sizes for important
   content. Use `alert-info`, `alert-warning`, `callout`, etc. for callouts.
 - **Typographical quotes and apostrophes in body text.** In regular text and in
-  headings, use typographical quotes (“...”) instead of straight quotes ("..."),
-  and use the typographical apostrophe (’) instead of the straight apostrophe
+  headings, use typographical quotes (U+201C “…” U+201D) instead of straight quotes ("..."),
+  and use the typographical apostrophe (U+2019 ’) instead of the straight apostrophe
   (').
-- **No spaces around em dashes.** Do not surround em dashes (—) by spaces.
+- **No spaces around em dashes.** Do not surround em dashes (U+2014 —) by spaces.
 - **Responsive layout.** Use Bootstrap's grid so the experiment works on
   different screen sizes. If in doubt, follow best practices.
 
