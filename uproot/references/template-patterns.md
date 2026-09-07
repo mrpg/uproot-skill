@@ -33,6 +33,125 @@ Page Title
 {% endblock late %}
 ```
 
+## Compose Before You Duplicate
+
+Apply the mandatory DRY pass from `SKILL.md` before writing page-local frontend
+code. Reuse is based on ownership and scope: global project composition, scoped
+static assets, and parameterised Jinja2 fragments. These mechanisms work for
+HTML, CSS, JavaScript, and arbitrarily complex Jinja2.
+
+### ProjectHead.html and ProjectBody.html
+
+uproot automatically includes root-level `ProjectHead.html` inside `<head>` and
+root-level `ProjectBody.html` at the end of `<body>` on participant-facing pages.
+They are fragments: do not extend `Base.html` or wrap their content in page blocks.
+
+Use them for concerns that truly apply throughout the project, such as a shared
+stylesheet, shared browser behaviour, a global progress indicator, or study-wide
+chrome. Prefer links to project static assets over copying `<style>` or `<script>`
+contents into every page:
+
+```text
+project/
+├── ProjectHead.html
+├── ProjectBody.html
+├── _static/
+│   ├── study.css
+│   └── study.js
+└── my_app/
+    ├── _static/
+    │   └── decision.js
+    └── ChoiceCard.html
+```
+
+```html
+{# ProjectHead.html #}
+<link rel="stylesheet" href="{{ projectstatic('study.css') }}">
+<script defer src="{{ projectstatic('study.js') }}"></script>
+```
+
+Project fragments can render on routes without a current participant. Guard
+participant-dependent markup explicitly:
+
+```html
+{# ProjectBody.html #}
+{% if player is not none and len(player.page_order) > 0 %}
+    <div class="study-progress" data-page="{{ player.show_page }}"></div>
+{% endif %}
+```
+
+Do not put app-specific assumptions into these global fragments. In particular,
+use `projectstatic()` there; `appstatic()` requires a current app context.
+
+### Static assets by scope
+
+Place project-wide files in the root `_static/` directory and address them with
+`projectstatic()`. Place app-owned files in `<app>/_static/` and address them with
+`appstatic()`. Both helpers accept nested paths.
+
+```html
+{% block head %}
+<link rel="stylesheet" href="{{ appstatic('css/task.css') }}">
+{% endblock head %}
+
+{% block late %}
+<script src="{{ appstatic('js/task.js') }}"></script>
+{% endblock late %}
+```
+
+Never hard-code `/static/...` URLs. The helpers preserve uproot's configured root
+and correctly encode path components. Keep pure reusable CSS and JavaScript in
+static files. Inline only genuinely page-specific snippets or Jinja2-generated
+configuration.
+
+### Parameterised template fragments
+
+An included fragment inherits the template context. Use `{% with %}` to give it a
+small, explicit interface, and use loops to render repeated structures from data:
+
+```html
+{% for option in options %}
+    {% with field_name="choice_" ~ loop.index, option=option %}
+        {% include "my_app/ChoiceCard.html" %}
+    {% endwith %}
+{% endfor %}
+```
+
+```html
+{# my_app/ChoiceCard.html: a fragment, with no extends or page blocks #}
+<div class="card">
+    <label for="{{ field_name }}">{{ option.label }}</label>
+    <input id="{{ field_name }}" name="{{ field_name }}" value="{{ option.value }}">
+</div>
+```
+
+Fragments may contain markup, `<style>`, `<script>`, loops, conditionals, nested
+includes, and other Jinja2. Use a static file when the CSS or JavaScript is pure;
+use a fragment when it needs server-rendered values or Jinja2 control flow. A
+required `PageName.html` may be a thin wrapper that supplies variables and includes
+one shared implementation. Pages or treatments that differ only in data must not
+carry copied template bodies.
+
+For substantial browser behaviour, keep the implementation in one static file and
+pass page data through the page's `jsvars`, accessed as `uproot.vars`:
+
+```python
+class Task(Page):
+    @classmethod
+    def jsvars(page, player):
+        return dict(limit=C.LIMIT, treatment=player.treatment)
+```
+
+```html
+{% block late %}
+<script src="{{ appstatic('task.js') }}"></script>
+{% endblock late %}
+```
+
+This keeps templates declarative and prevents multiple inline copies of the same
+event handling. Extract ordinary JavaScript helper functions inside `simulate.js`
+when several simulated pages share fill or submission behaviour.
+
 ## Jinja2 Essentials
 
 ### Variables
@@ -100,10 +219,10 @@ auto-escaped to prevent XSS. If in doubt, omit the filter.
 {{ fields() }}                          {# Render all fields #}
 {{ errors() }}                          {# Display form errors #}
 {{ chat(session.chat) }}                {# Render chat widget #}
-{{ appstatic("script.js") }}            {# URL for static file in app dir #}
-{{ projectstatic("shared.js") }}        {# URL for project-level static file #}
-{% include "app_name/partial.html" %}   {# Include another template #}
 ```
+
+See **Compose Before You Duplicate** for `ProjectHead.html`, `ProjectBody.html`,
+`appstatic()`, `projectstatic()`, and `{% include %}`.
 
 ## Player Data Access
 
@@ -221,24 +340,4 @@ layout, forms, buttons, cards, modals, alerts, and responsive design:
 <div class="alert alert-info">
     Important information here.
 </div>
-```
-
-## Template Includes
-
-Put repeating parts in separate HTML files:
-
-```html
-{% include "my_app/PayoffTable.html" %}
-```
-
-The included file does NOT use `{% extends %}` - it's a fragment:
-
-```html
-{# PayoffTable.html - no extends block #}
-<table class="table">
-    <tr>
-        <td>Your payoff</td>
-        <td>{{ player.payoff }}</td>
-    </tr>
-</table>
 ```

@@ -19,6 +19,48 @@ uproot is a Python framework for browser-based behavioral experiments. Apps are
 self-contained directories with Python logic, Jinja2 HTML templates, and optional
 JavaScript. This skill guides you through building them correctly.
 
+## CRITICAL: DON'T REPEAT YOURSELF
+
+**DRY is a non-negotiable design invariant. Every fact, rule, fragment, style, and
+behaviour must have one authoritative implementation. Respect this throughout every
+task, not merely during cleanup.** This applies equally to Python, HTML, Jinja2,
+JavaScript, CSS, `simulate.js`, study copy, constants, and payoff logic.
+
+Before adding or changing code:
+
+1. Search the project for the same content, selector, calculation, field pattern,
+   event handler, and component. Inspect `ProjectHead.html`, `ProjectBody.html`,
+   project/app `_static/` directories, and existing template fragments.
+2. Identify the narrowest correct owner: project, app, page family, or page.
+3. Extend that owner and update its callers. Do not paste a second implementation
+   and do not leave the superseded copy behind.
+
+After editing, search again for stale or parallel implementations. A change is not
+complete while the same knowledge must be maintained in multiple places. Prefer a
+small function, data structure plus loop, context property, Jinja2 fragment, or
+static asset over copied code. Keep abstractions surgical: consolidate genuinely
+shared knowledge, but do not build machinery around an unrelated one-off.
+
+For frontend work, use uproot's excellent reuse facilities as the default architecture:
+
+| Scope | One authoritative home | Consume it with |
+|---|---|---|
+| Every participant page in the project | root `ProjectHead.html` or `ProjectBody.html` | automatic inclusion by uproot |
+| Shared project CSS, JavaScript, images, or documents | root `_static/` | `projectstatic()` |
+| One app's CSS, JavaScript, images, or documents | `<app>/_static/` | `appstatic()` |
+| Repeated or parameterised markup/Jinja2 | an app template fragment | `{% include %}`, usually with `{% with %}` |
+
+Use Python helpers and `C` for repeated definitions and parameters. Keep authoritative
+experimental calculations on the server; do not independently reimplement them in
+templates and JavaScript. When interactive previews require client-side calculation,
+put that calculation in one JavaScript helper and verify it against the server rule.
+For the occasional experiment whose same complicated formula genuinely must run in
+both Python and JavaScript, consider [exprcompile](https://github.com/mrpg/exprcompile).
+It compiles one SymPy expression to both languages, including complete source files
+via `compile_all_to_files`, so the symbolic formula remains a single source of truth.
+Do not add it for simple or server-only calculations.
+Read `references/template-patterns.md` for the exact composition patterns.
+
 ## Converting from Other Platforms
 
 When asked to convert an experiment from **Qualtrics**, **oTree**, or other well-known
@@ -91,6 +133,7 @@ Every app is a directory containing:
 my_app/
 ├── __init__.py      # All Python logic
 ├── PageName.html    # One template per visible Page class (matching class name exactly)
+├── _static/         # App-scoped CSS, JavaScript, images, and documents
 ├── simulate.js      # Automated testing script (optional but recommended)
 └── README.md        # Loading instructions
 ```
@@ -256,73 +299,10 @@ Optional app-level callbacks:
 
 ## HTML Templates
 
-Read `references/template-patterns.md` for the full reference. The essentials:
-
-Every template extends `Base.html` and defines `title` and `main` blocks:
-
-```html
-{% extends "Base.html" %}
-
-{% block title %}
-Page Title
-{% endblock title %}
-
-{% block main %}
-
-<p>Your endowment is {{ C.ENDOWMENT | fmtnum(places=2) }}.</p>
-
-{{ field(form.amount) }}
-{{ errors() }}
-
-{% endblock main %}
-```
-
-Key template functions:
-- `{{ field(form.fieldname) }}` - render a single form field
-- `{{ fields() }}` - render all form fields
-- `{{ errors() }}` - display validation errors
-- `{{ appstatic("file.js") }}` - URL for static files in the app directory
-- `{{ projectstatic("file.js") }}` - URL for project-level static files
-- `{% include "app_name/partial.html" %}` - include another template
-- `{{ chat(session.chat) }}` - render a chat widget
-
-Key template variables:
-- `{{ C.CONSTANT }}` - constants from the C class
-- `{{ player.attribute }}` - player data
-- `{{ player.payoff }}` - player's payoff
-- `{{ player.context.property }}` - computed context properties
-- `{{ player.other_in_group.attribute }}` - partner's data (2-player groups)
-- `{{ player.others_in_group }}` - list of other group members
-- `{{ player.group.players }}` - all group members
-
-### The `| safe` filter
-
-When a template variable contains HTML that should be rendered as markup (not
-escaped), use `{{ variable | safe }}`. This is needed for experimenter-defined
-content such as instructions stored in constants, formatted prompts, or
-dynamically built HTML from Python code. **Only use `| safe` on values that
-come from the experimenter's code (e.g., `C.INSTRUCTIONS`, computed context
-properties, Python-generated HTML). Never use `| safe` on any value that could
-contain participant input** — player-typed text must always be auto-escaped by
-omitting the filter.
-
-Use `{% block head %}` for custom CSS and `{% block late %}` for late-loaded scripts.
-
-Additional blocks: `pre_container`, `main_full_width` (no container),
-`main2`/`main2_full_width`/`main3` (extra content sections),
-`pre_main`/`post_main`, `pre_form`/`form_start`/`form_end`,
-`header_start`/`header_end`, `footer`, `late2`.
-
-Template switches (set as Jinja2 variables):
-- `buttons = false` - hide the default Next button
-- `disable_bootstrap = true` - omit Bootstrap CSS/JS
-- `disable_uproot_fonts = true` - omit default web fonts
-- `disable_tabular_numbers = true` - omit the tabular-number font stylesheet
-- `disable_terms = true` - omit the terms script
-- `disable_auto_start = true` - don't auto-initialize uproot JS
-- `disable_connection_lost_modal = true` - suppress connection-lost modal
-
-Bootstrap 5 and Alpine.js are available on every page out of the box.
+Read `references/template-patterns.md` whenever creating or changing HTML, Jinja2,
+CSS, or browser JavaScript. It is the single reference for template structure,
+safe rendering, blocks, client APIs, and the DRY composition facilities highlighted
+above. Bootstrap 5 and Alpine.js are available on every page out of the box.
 
 ### UX and Accessibility
 
@@ -487,14 +467,15 @@ Template: `{{ chat(session.chat) }}`
 ## Checklist for New Apps
 
 1. Study the relevant examples (see Research workflow above) and adapt a similar existing app where appropriate
-2. Preserve the required uproot LGPL notice and include `uproot_license.txt`
-3. Define `DESCRIPTION` and `page_order`
-4. Create matching `.html` templates for each Page class (name must match exactly)
-5. Add to `main.py` with `load_config()`
-6. Add to `README.md` in the Apps table
-7. Write a `simulate.js`
-8. Run `black`, `isort`, `ruff` if installed (star import warnings may be ignored)
-9. Use 4-space indentation everywhere
+2. Complete the mandatory DRY search-and-ownership pass
+3. Preserve the required uproot LGPL notice and include `uproot_license.txt`
+4. Define `DESCRIPTION` and `page_order`
+5. Create matching `.html` templates for each Page class (name must match exactly)
+6. Add to `main.py` with `load_config()`
+7. Add to `README.md` in the Apps table
+8. Write a `simulate.js`
+9. Run `black`, `isort`, `ruff`, and `mypy`, and fix issues rigorously and cleanly
+10. Use 4-space indentation everywhere
 
 ## Common Paradigms
 
