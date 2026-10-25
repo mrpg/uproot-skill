@@ -40,9 +40,9 @@ The `references/` directory contains detailed documentation on:
 - **field-types.md** - All available field types and their parameters
 - **template-patterns.md** - HTML/Jinja2 templates, JavaScript, Alpine.js
 - **game-theory.md** - Patterns for game theory experiments
-- **page-ordering.md** - Rounds, Between, Random, Bracket constructs
+- **page-ordering.md** - Rounds, Repeat, blocks, Between, RandomOrder, Bracket constructs
 - **search-patterns.md** - Grep patterns for finding features in examples
-- **advanced.md** - Models, live methods, chat, dropouts, and more
+- **advanced.md** - Models, live methods, chat, dropouts, admin digest/pipeline/settings forms, APIs, i18n, and more
 
 ## Examples repository
 

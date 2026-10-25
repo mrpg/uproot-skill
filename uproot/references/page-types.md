@@ -37,6 +37,17 @@ class GroupPlease(GroupCreatingWait):
             player.is_first_mover = role
 ```
 
+Grouping semantics worth knowing:
+- Players are only grouped with others who have actually **loaded** the same
+  wait page (same page position). A player advanced by the admin while their
+  browser is closed is grouped once the page loads.
+- Assignment of arriving players to groups is randomized.
+- A player joins a group only after the wait page's own `early` and
+  `before_always_once` have finished, so values they set are available in
+  `after_grouping`.
+- In multi-app configs, list only this app's groups with
+  `session.groups(app=__name__)`.
+
 ### SynchronizingWait
 Waiting page where all group members must arrive before proceeding. Use for
 calculating results after all players have made their decisions.
@@ -77,6 +88,15 @@ Most page methods use `@classmethod` and receive `page` (the class) as their
 first argument, followed by `player` (or `group`/`session` for wait pages).
 Methods decorated with `@live` already become classmethods, so do not add an
 extra `@classmethod` above them.
+
+### Entry hooks
+
+```python
+@classmethod
+def early(page, player, request):
+    """Earliest hook when entering a new page position; receives the Starlette request."""
+    player.user_agent = request.headers.get("user-agent")
+```
 
 ### Display control
 
@@ -140,6 +160,19 @@ def validate(page, player, data):
     return {"min_val": "Too high", "max_val": ["Error 1", "Error 2"]}
 ```
 
+Strings and lists appear at the top of the form; dict errors appear next to
+their fields, because `{{ field(form.x) }}` renders that field's errors. Errors
+of a failed submission are shown once, not revalidated on reload.
+
+### Before saving
+
+```python
+@classmethod
+def before_form_save(page, player, data):
+    """After validation passes, before ordinary fields are saved. `data` is read-only."""
+    player.submitted_at = time()
+```
+
 ### Stealth fields
 
 Fields that are validated but NOT stored in the database. Use for comprehension
@@ -194,7 +227,7 @@ rejects most `after_*` hooks on wait pages.
 ```python
 @classmethod
 def timeout(page, player):
-    """Return timeout in seconds. Page auto-submits when expired."""
+    """Return timeout in seconds (or None to disable). Page auto-submits when expired."""
     return 120  # 2 minutes
 
 @classmethod
@@ -202,6 +235,15 @@ def timeout_reached(page, player):
     """Called when the timeout expires."""
     player.timed_out = True
 ```
+
+After the deadline, a timeout **overrides `may_proceed`**: valid form data is
+saved, invalid data is discarded silently, and the page advances. Requests up to
+`upd.TIMEOUT_TOLERANCE` seconds (default 1) before the deadline count as timed out
+too, but only if `may_proceed` allows advancing. If the next page relies on the
+deadline having passed, check `time() >= deadline` in `may_proceed`.
+
+To hide the countdown while keeping the timeout, add
+`{% block timeoutbox %}{% endblock timeoutbox %}` to the page template.
 
 For multi-page timeouts, store the deadline on the player and compute remaining
 time dynamically:
@@ -241,5 +283,13 @@ Combine with `may_proceed()` to control page advancement in live pages.
 ### Page properties
 
 ```python
-allow_back = True  # Allow player to go back to this page
+allow_back = True     # Show a Back button (may also be a classmethod taking player)
+keep_values = True    # Pre-fill the form from values already stored on the player
+template = f"{__name__}/Shared.html"  # Project-root-relative; .html or .md
 ```
+
+Going back re-displays a page but does not undo saved data; `after_once` does
+not run again.
+
+Page attributes and hooks are type-annotated in uproot; in strict-mypy projects
+annotate overrides accordingly (e.g. `def show(page, player: PlayerType) -> bool`).

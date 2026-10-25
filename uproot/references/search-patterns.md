@@ -25,6 +25,7 @@ rg "synchronize.*session" -g "*.py"
 ```bash
 rg "Rounds\(" -g "*.py"
 rg "Repeat\(" -g "*.py"
+rg "block=" -g "*.py"
 rg "player.round" -g "*.py"
 rg "within\(round" -g "*.py"
 rg "along\(\"round" -g "*.py"
@@ -34,7 +35,8 @@ rg "digest\(" -g "*.py"
 ## Forms and Fields
 ```bash
 rg "fields = dict\(" -g "*.py"
-rg "DecimalField|RadioField|IntegerField|StringField" -g "*.py"
+rg "DecimalField|FloatField|RadioField|IntegerField|StringField" -g "*.py"
+rg "likert_matrix|likert_grid" -g "*.html"
 rg "LikertField|BooleanField|SelectField" -g "*.py"
 rg "BoundedChoiceField|IBANField|FileField" -g "*.py"
 rg "stealth_fields" -g "*.py"
@@ -61,7 +63,7 @@ rg "onCustomEvent" -g "*.html" -g "*.js"
 
 ## Randomization
 ```bash
-rg "Random\(" -g "*.py"
+rg "RandomOrder\(" -g "*.py"
 rg "shuffled" -g "*.py"
 rg "Between\(" -g "*.py"
 rg "Bracket\(" -g "*.py"
@@ -126,12 +128,22 @@ rg "def new_session" -g "*.py"
 rg "def restart" -g "*.py"
 rg "def language" -g "*.py"
 rg "def api2" -g "*.py"
+rg "uproot.api2" -g "*.html" -g "*.js"
+```
+
+## Admin Integration
+```bash
+rg "def digest|def pipeline" -g "*.py"
+rg --files -g "AdminDigest.html" -g "AdminSettings.html" -g "AdminPipeline.html"
+rg "get_setting|session.settings" -g "*.py"
 ```
 
 ## Template Patterns
 ```bash
 rg "field\(form\." -g "*.html"
-rg "appstatic" -g "*.html"
+rg "appstatic|projectstatic|static\(" -g "*.html"
+rg --files -g "*.md" -g "!README.md"
+rg "set (buttons|disable_)" -g "*.html"
 rg "x-data|x-init|x-text" -g "*.html"
 rg "uproot.currentPage" -g "*.js"
 ```

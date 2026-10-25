@@ -156,24 +156,11 @@ Access historical data in templates:
 {% endfor %}
 ```
 
-### Digest function
+### Admin reporting
 
-For admin reporting across rounds:
-
-```python
-def digest(session):
-    rows = []
-    for player in session.players:
-        for round in range(1, C.ROUNDS + 1):
-            p = player.within(round=round)
-            rows.append({
-                "player": player.name,
-                "round": round,
-                "choice": p.get("choice"),
-                "payoff": p.get("payoff"),
-            })
-    return rows
-```
+For per-round export rows, write a `pipeline(session, data=None)`; for a live
+summary, a `digest(session)` with `AdminDigest.html`. Both are shown in the
+"Digest and Pipeline" section of `references/advanced.md`.
 
 ## Treatment Assignment
 
@@ -247,7 +234,10 @@ Before building a new game, check these examples in the repository:
 - `cournot` - Cournot competition (simultaneous)
 - `bertrand` - Bertrand competition (simultaneous)
 - `stackelberg` - Stackelberg competition (sequential)
-- `gift_exchange_game` - Gift exchange (sequential, roles)
+- `gift_exchange` - Gift exchange (sequential, roles)
+- `pgg_strategy_method` - Public goods game with the strategy method
+- `prisoners_dilemma_fancy` - PD with instructions and a more polished UI
+- `mind_game` - Mind game honesty task
 - `focal_point` - Coordination game
 - `travellers_dilemma` - Traveller's dilemma
 - `minimum_effort_game` - Weakest link (N-player)

@@ -27,10 +27,17 @@ IntegerField(label="Quantity", min=0, max=100)
 ```
 
 ### DecimalField
-Decimal number input.
+Decimal number input. Use this for money.
 ```python
 DecimalField(label="Amount", min=0, max=cu("10"), places=2)
 DecimalField(label="Price", min=0, max=C.MAX_PRICE, step="0.01")
+```
+
+### FloatField
+Like `DecimalField` (same options), but stores a Python `float`. Use it for
+measurements such as reaction times, not for money.
+```python
+FloatField(label="Reaction time (seconds)", min=0.0, step=0.001)
 ```
 
 ### DecimalRangeField
@@ -42,6 +49,11 @@ DecimalRangeField(
     label_min="Disagree", label_max="Agree",
 )
 ```
+
+Long endpoint labels wrap below `breakpoint` (viewport width in px, default 992).
+
+### FloatRangeField
+Like `DecimalRangeField` (same slider options), but stores a `float`.
 
 ### BooleanField
 Checkbox input.
@@ -71,8 +83,13 @@ SelectField(
 )
 ```
 
+The dropdown starts with an empty option ("—"), so skipping the question cannot
+submit the first choice by accident. Required fields reject it; optional fields
+save `None`. If your choices already contain `""` (e.g. `("", "Please choose")`),
+no extra option is added and an optional field saves `""`.
+
 ### LikertField
-Likert scale (radio buttons in a row).
+Likert scale (radio buttons in a row; responsive below `breakpoint`, default 992px).
 ```python
 LikertField(
     label="I enjoy this task",
@@ -80,6 +97,17 @@ LikertField(
     label_min="Strongly disagree",
     label_max="Strongly agree",
 )
+```
+
+`choices=` overrides the auto-generated integer choices. `LikertFieldClassic`
+takes the same options except `breakpoint` and always renders as a table.
+
+For several items sharing one scale, render a matrix in the template instead of
+one field per row. These macros do not show errors, so add `{{ errors() }}`:
+```html
+{{ likert_matrix(form.item1, form.item2, form.item3) }}  {# table #}
+{{ likert_grid(form.item1, form.item2, breakpoint=992) }}  {# responsive #}
+{{ errors() }}
 ```
 
 ### DateField
@@ -102,7 +130,8 @@ FileField(label="Upload your CV")
 ```
 
 ### IBANField
-IBAN input with validation.
+IBAN input with validation. `IBANField` and `BICField` require the optional extra:
+`uv add 'uproot-science[iban]<1'`.
 ```python
 IBANField(label="Your IBAN")
 ```
@@ -151,6 +180,10 @@ RadioField(
 )
 ```
 
+uproot's choice fields accept tuples, dicts, or plain value lists. Raw
+`wtforms.*` choice fields (rarely needed) require `wtforms.SelectChoice(value,
+label)` instead of tuples. Nested `wtforms.FormField`/`FieldList` are rejected.
+
 For DecimalRangeField:
 ```python
 DecimalRangeField(
@@ -188,7 +221,10 @@ async def fields(page, player):
 ## Rendering in Templates
 
 ```html
-{{ field(form.amount) }}     {# Render a single field #}
+{{ field(form.amount) }}     {# Render a single field, including its errors #}
 {{ fields() }}               {# Render all fields #}
-{{ errors() }}               {# Show validation errors #}
+{{ errors() }}               {# Form-level errors; needed for hand-written inputs and Likert macros #}
 ```
+
+Field labels, descriptions, and choices are run through translation; see the
+Internationalization section of `references/advanced.md`.

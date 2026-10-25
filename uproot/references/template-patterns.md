@@ -33,6 +33,66 @@ Page Title
 {% endblock late %}
 ```
 
+| Block | Position |
+|---|---|
+| `title` | Browser tab and page heading |
+| `head` | Inside `<head>` |
+| `pre_main` | Before the main content, outside the Bootstrap container |
+| `main` | Main content, inside the container |
+| `main_full_width` | After `main`, full viewport width (banners, wide charts) |
+| `main2` | A second container section |
+| `late` | End of `<body>` (scripts) |
+| `timeoutbox` | Countdown display; override empty to hide it |
+
+Further slots: `main2_full_width`, `main3`, `late2`, `footer`, `header_start`,
+`header_end`. There is no `pre_container` block.
+
+### Markdown pages
+
+If `PageName.html` is missing, uproot renders `PageName.md`. It needs exactly one
+level-one heading, which becomes the title. Jinja works as usual:
+
+```markdown
+# Welcome
+
+You start with {{ C.ENDOWMENT }} points.
+
+{{ field(form.consent) }}
+```
+
+Use Markdown for text-heavy pages (instructions, consent, debriefing); use HTML
+when the page needs custom layout or scripts. See the `anchoring_markdown` example.
+
+### Base template switches
+
+Set these near the top of a page template to change the default layout:
+
+```html
+{% extends "Base.html" %}
+{% set buttons = False %}
+```
+
+| Variable | Default | Effect |
+|---|---|---|
+| `buttons` | `True` | `False` hides the default Back/Next buttons |
+| `disable_alpinejs` | `False` | Do not load Alpine.js |
+| `disable_bootstrap` | `False` | Do not load Bootstrap CSS/JS |
+| `disable_uproot_fonts` | `False` | Do not load uproot's web fonts |
+| `disable_tabular_numbers` | `False` | Do not load the tabular-number font stylesheet |
+| `disable_terms` | `False` | Do not load the terms script |
+| `disable_auto_start` | `False` | Do not run `uproot.init()` and the WebSocket start |
+| `disable_connection_lost_modal` | `False` | No connection-lost modal |
+
+To change a default for the whole project, set it once in `main.py` instead of
+in every template (DRY):
+
+```python
+upd.TEMPLATE_DEFAULTS["disable_alpinejs"] = True
+```
+
+`TEMPLATE_DEFAULTS` also accepts `buddy_image` (a file found by `static()`) and
+`buddy_label` to customize the chat buddy.
+
 ## Compose Before You Duplicate
 
 Apply the mandatory DRY pass from `SKILL.md` before writing page-local frontend
@@ -87,7 +147,9 @@ use `projectstatic()` there; `appstatic()` requires a current app context.
 
 Place project-wide files in the root `_static/` directory and address them with
 `projectstatic()`. Place app-owned files in `<app>/_static/` and address them with
-`appstatic()`. Both helpers accept nested paths.
+`appstatic()`. Both helpers accept nested paths. `static('file')` searches the
+current app's `_static/` first and falls back to the project's, which suits
+defaults that individual apps may override.
 
 ```html
 {% block head %}
@@ -193,7 +255,7 @@ when several simulated pages share fill or submission behaviour.
 ```html
 {{ "Yes" if player.cooperated else "No" }}
 {{ value | fmtnum(places=1) }}          {# Format to 1 decimal place #}
-{{ data | tojson }}                     {# JSON encode for JavaScript #}
+{{ data | tojson }}                     {# JSON encode; no `| safe` needed #}
 {{ C.INSTRUCTIONS | safe }}             {# Render experimenter HTML as markup #}
 ```
 
@@ -267,6 +329,16 @@ uproot.currentPage  // e.g., "my_app/Decision"
 // Access jsvars data
 uproot.vars.myVariable
 
+// Constants listed in C.__export__
+C.MY_CONSTANT
+
+// Format numbers exactly like the fmtnum filter (rounds half up)
+uproot.fmtnum(1234.5, { pre: "$", places: 2 })  // "$1,234.50"
+
+// Call the app's api2() as the authenticated participant (returns a fetch Promise)
+uproot.api2("my_app", { method: "POST", body: JSON.stringify(payload),
+                        headers: { "Content-Type": "application/json" } })
+
 // Run code when page is ready
 uproot.onReady(() => {
     // initialization
@@ -293,7 +365,8 @@ I("radio-0").checked = true;            // Check a radio button
 
 ### Alpine.js
 
-Alpine.js is available on every page. Use it for reactive UIs:
+Alpine.js is loaded on every page unless `disable_alpinejs` is set. Use it for
+reactive UIs:
 
 ```html
 <div x-data="{ count: 0, loading: false }">
@@ -317,9 +390,13 @@ Common Alpine.js patterns in uproot:
 </div>
 ```
 
+The built-in Alpine store exposes the page timeout:
+`Alpine.store("uproot").timeout` (`{ active, level, text, compact }`).
+
 ### Bootstrap 5
 
-Bootstrap 5 CSS and JS are available on every page. Use Bootstrap classes for
+Bootstrap 5 CSS and JS (and Bootstrap Icons) are available on every page. The
+`bootstrap_elements` example is a guided tour of what is available. Use Bootstrap classes for
 layout, forms, buttons, cards, modals, alerts, and responsive design:
 
 ```html

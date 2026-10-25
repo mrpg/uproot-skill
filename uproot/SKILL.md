@@ -8,9 +8,10 @@ description: >
   auction, etc.), needs a survey/questionnaire, real effort task, or any interactive
   multiplayer study. Also activate when the user references uproot page types
   (Page, NoshowPage, GroupCreatingWait, SynchronizingWait), uproot fields
-  (DecimalField, RadioField, LikertField, etc.), uproot imports (uproot.smithereens,
-  uproot.fields, uproot.models), or asks about rounds, groups, live/WebSocket
-  features, or simulate.js in an experiment context.
+  (DecimalField, FloatField, RadioField, LikertField, etc.), uproot imports
+  (uproot.smithereens, uproot.fields, uproot.models), page-order operators
+  (Rounds, Repeat, RandomOrder, Between, Bracket, blocks), or asks about rounds,
+  groups, live/WebSocket features, or simulate.js in an experiment context.
 ---
 
 # Building Uproot Experiments
@@ -124,6 +125,13 @@ Key source files (under `src/uproot/` in the uproot repo):
 - `_static/uproot.js` - Client-side JavaScript API
 - `_static/simulate.js` - Simulation helper API (`uproot.simulate`)
 - `types.py` - Page base classes and lifecycle enforcement
+- `deployment.py` - Settings for `main.py` (`upd.*`), including `TEMPLATE_DEFAULTS`
+- `models.py` - Persistent data models (`uproot.models`)
+
+The uproot-docs repository has an `upgrade.md` page, and uproot announces breaking
+changes and security notices via `uv run uproot announcements`. When an existing
+project pins an older uproot, check its installed version (`uv run uproot --version`)
+before applying APIs from this skill that may be newer than the pin.
 
 ## App Structure
 
@@ -131,12 +139,19 @@ Every app is a directory containing:
 
 ```
 my_app/
-├── __init__.py      # All Python logic
-├── PageName.html    # One template per visible Page class (matching class name exactly)
-├── _static/         # App-scoped CSS, JavaScript, images, and documents
-├── simulate.js      # Automated testing script (optional but recommended)
-└── README.md        # Loading instructions
+├── __init__.py          # All Python logic
+├── PageName.html        # One template per visible Page class (or PageName.md)
+├── _static/             # App-scoped CSS, JavaScript, images, and documents
+├── simulate.js          # Automated testing script (optional but recommended)
+├── AdminDigest.html     # Optional: admin view of digest(session)
+├── AdminSettings.html   # Optional: custom session-settings form in the admin
+└── README.md            # Loading instructions
 ```
+
+Templates are looked up by class name: first `PageName.html`, then `PageName.md`
+(a Markdown page with exactly one `#` heading, which becomes the title; Jinja
+still works). An explicit `template = f"{__name__}/Other.html"` is relative to
+the **project root**, so always include the app name.
 
 Apps are parts of projects. For a new project, use the supported scaffold command
 from the documentation, for example `uv run --with uproot-science uproot setup
@@ -152,21 +167,23 @@ You must ALWAYS create projects in new subdirectories. NEVER pollute the pwd.
 
 Every `__init__.py` must preserve the uproot third-party dependency notice.
 Because uproot is LGPL v3+, apps that use it must also carry the LGPL license
-text for uproot, typically as `uproot_license.txt`. The app itself may be
-licensed under 0BSD, MIT, proprietary terms, or any other license compatible
-with using an LGPL dependency.
+text for uproot, typically as `uproot_license.txt` (new projects get it
+automatically). The app itself may be licensed under 0BSD, MIT, proprietary
+terms, or any other license compatible with using an LGPL dependency. This is
+the header that `uproot new --minimal` writes:
 
 ```python
-# Docs are available at https://uproot.science/
-# Examples are available at https://github.com/mrpg/uproot-examples
-#
-# This example app is under the 0BSD license. You can use it freely and build on it
-# without any limitations and without any attribution. However, these two lines must be
-# preserved in any uproot app (the license file is automatically installed in projects):
+# SPDX-License-Identifier: 0BSD
 #
 # Third-party dependencies:
 # - uproot: LGPL v3+, see ../uproot_license.txt
+#
+# Docs are available at https://uproot.science/
+# Examples are available at https://github.com/mrpg/uproot-examples
 ```
+
+When adapting an example app, keep its header, including the two
+"Third-party dependencies" lines.
 
 ### Standard imports
 
@@ -176,6 +193,12 @@ from uproot.smithereens import *
 ```
 
 Add `import uproot.models as um` when using persistent data models (Entry classes).
+
+New projects run `mypy --strict`, and the examples annotate every hook. Follow
+suit: annotate `player: PlayerType`, `group: GroupType`, `session: SessionType`
+(all exported from `uproot.smithereens`) and return types (`-> None`,
+`-> dict[str, Any]`, …). Use `cast()` where a stored value's type is unknown to
+mypy, e.g. `return cast(bool, player.done)`.
 
 ### Required module-level attributes
 
@@ -201,8 +224,8 @@ class C:
     GROUP_SIZE = 4
 ```
 
-Export selected constants to JavaScript (`uproot.vars._uproot_internal.C`) by
-putting `__export__` inside the `C` class:
+Export selected constants to JavaScript (available as `window.C`, i.e. `C.ITEMS`
+in scripts and Alpine expressions) by putting `__export__` inside the `C` class:
 ```python
 class C:
     ITEMS = [...]
@@ -266,43 +289,62 @@ def page_order(player: PlayerType) -> list[Any]:
     return [Instructions, TaskB, Results]
 ```
 
-Advanced constructs (read `references/page-ordering.md`):
-- `Rounds(Page1, Page2, n=5)` - repeat a block n times
+Advanced constructs ("SmoothOperators"; read `references/page-ordering.md`):
+- `Rounds(Page1, Page2, n=5)` - repeat a block n times (`n` must be an `int`)
 - `Repeat(Page1, Page2)` - repeat while `player.add_round` is true
 - `Between(PageA, PageB, PageC)` - randomly show one
-- `Bracket(PageA, PageB)` - group pages together within Between/Random
-- `Random(PageA, PageB, PageC)` - randomize order
+- `Bracket(PageA, PageB)` - group pages together within Between/RandomOrder
+- `RandomOrder(PageA, PageB, PageC)` - randomize order (formerly `Random`, which no longer exists)
+- `block="main"` on `Rounds`/`Repeat` - **required** when one app can run several loops
+
+Operators accept only pages and other operators. Never pass a list; use `Bracket()`.
 
 ### Module-level hooks
 
 ```python
-def new_player(player):
+def new_player(player: PlayerType) -> None:
     player.counter = 0
     player.treatment = rng().choice([1, 2])
 
-def new_session(session):
+def new_session(session: SessionType) -> None:
     session.model = um.create_model(session, tag="data")
 ```
 
-**Note**: `rng` is exported from uproot.smithereens, and returns a random.Random object initialized with
-safe cryptographic randomness. In most experiments, `rng()` should be used whenever a random.Random object
-could be used, as it is good practice.
+**Note**: `rng` is exported from uproot.smithereens, and returns an independent
+`random.Random` object seeded from the OS. Always use `rng()` instead of the
+module-level `random` functions. If later draws must continue the same stream,
+store the generator itself on the player (`player.rng = rng()`); its state is
+persisted.
 
-Optional app-level callbacks:
-- `digest(session)` returns admin-facing summary data (dict or list) for monitoring.
-- `pipeline(session)` returns a `list[dict[str, Any]]` of derived rows for export.
+**Reserved names.** Never use these as field or attribute names: `name` (the
+generated player name; use e.g. `participant_name`), `along`, `fields`, `flush`,
+`get`, `history`, `refresh`, `strict`, `within`. uproot also manages `round`,
+`block`, `round_nested`, `add_round`, and `between_showed`.
+
+Optional app-level callbacks (they are called with keyword arguments, so use
+exactly these parameter names):
+- `digest(session)` returns a dict for the admin's digest view, rendered by
+  `AdminDigest.html` (the dict's keys become template variables).
+- `pipeline(session, data=None)` returns a `list[dict[str, Any]]` of derived rows
+  that the admin can run and download. `data` is posted JSON or `None`.
 - `language(player)` returns the locale string for this player (for i18n).
 - `async def restart()` runs on server restart (e.g., to re-create background tasks).
-- `async def api2(session, request)` defines an unauthenticated HTTP endpoint.
-  Treat its request input as public and untrusted; never expose secrets or
-  participant data through it.
+- `api(request, session)` is an operator endpoint that requires an API key.
+- `api2(request, session, player=None)` is a participant endpoint at
+  `/api2/{app}/{session}/`. It is **public** unless called from the participant's
+  page via `uproot.api2(appname, fetchOptions)`, in which case `player` is the
+  authenticated participant. Reject `player is None` when you need a participant;
+  never expose secrets, admin data, or other participants' data through it.
+
+Read `references/advanced.md` for these callbacks and for `AdminSettings.html`.
 
 ## HTML Templates
 
 Read `references/template-patterns.md` whenever creating or changing HTML, Jinja2,
 CSS, or browser JavaScript. It is the single reference for template structure,
 safe rendering, blocks, client APIs, and the DRY composition facilities highlighted
-above. Bootstrap 5 and Alpine.js are available on every page out of the box.
+above. Bootstrap 5 and Alpine.js are available on every page out of the box
+(both can be switched off per template or project-wide, see that reference).
 
 ### UX and Accessibility
 
@@ -334,8 +376,10 @@ interacting with the interface without confusion. Follow these principles:
 
 ## simulate.js
 
-Every app should include a `simulate.js` for automated testing. It runs on player
-pages in sessions created with "Simulate responses" enabled. Use the
+Every app should include a `simulate.js` for automated testing. It lives in the
+app directory (there is no project-wide `simulate.js`) and runs on player pages
+in sessions created with "Simulate responses" enabled, or started with
+`uv run uproot start <config> --simulate`. Use the
 `uproot.simulate` API — it provides chainable helpers for filling fields,
 choosing radio buttons, and submitting:
 
@@ -362,16 +406,21 @@ uproot.simulate.on("my_app/Survey", (sim) => {
 });
 ```
 
+`uproot.simulate.on(expected, fn)` matches the page identifier `"app/Page"`;
+`expected` may also be an array, a `RegExp`, or a predicate function.
+
 Available `sim` methods:
 - `sim.fill(name, value)` or `sim.fill({name: value, ...})` - set input values
-- `sim.choose(name, value)` - select a radio button or dropdown option
+- `sim.choose(name, value)` / `sim.select(name, value)` - select a radio button or dropdown option
 - `sim.check(name)` / `sim.uncheck(name)` - toggle checkboxes
 - `sim.chooseAnyRadio()` - pick a random radio button on the page
 - `sim.oneOf(name, values)` - choose a random value from an array
+- `sim.value(name)` - read a field's current (or checked radio) value
+- `sim.assertPage(expected)` - throw if not on the expected page
 - `sim.random(array)` - return a random element from an array
 - `sim.integer(min, max)` - return a random integer in [min, max]
 - `sim.submit()` - submit the page
-- All methods except `random`/`integer` return `sim` for chaining
+- All methods except `random`/`integer`/`value` return `sim` for chaining
 
 Pages without form fields (e.g., results pages) can auto-advance:
 ```javascript
@@ -389,12 +438,18 @@ load_config(uproot_server, config="my_app", apps=["my_app"])
 
 Add to the Apps table in `README.md` with description and difficulty rating.
 
+uproot also registers every app on its own as a config named `~my_app`. Such
+single-app configs have **no settings**, so read settings with defaults
+(`get_setting(session, "n_rounds", 5)`) or fail clearly in `new_session`.
+
 ## Field Types
 
 Read `references/field-types.md` for the complete reference. Summary of available
 types: BICField, BooleanField, BoundedChoiceField, DateField, DecimalField,
-DecimalRangeField, EmailField, FileField, IBANField, IntegerField, LikertField,
-RadioField, SelectField, StringField, TextAreaField.
+DecimalRangeField, EmailField, FileField, FloatField, FloatRangeField, IBANField,
+IntegerField, LikertField, LikertFieldClassic, RadioField, SelectField,
+StringField, TextAreaField. Nested WTForms fields (`FormField`, `FieldList`) are
+rejected.
 
 ## Live Methods (WebSocket)
 
@@ -437,6 +492,7 @@ def new_session(session):
 ```
 
 Store entries: `um.add_entry(session.trials, player, Trial, trial_number=1, ...)`
+(pass the player itself; identifier fields are filled automatically)
 Query entries: `um.filter_entries(session.trials, Trial, pid=player.pid)`
 
 ## Context Classes
@@ -449,6 +505,10 @@ class Context(PlayerContext):
     def total(self):
         return sum(p.contribution for p in self.player.group.players)
 ```
+
+`player.context` follows the participant's *current* app, so use it only in page
+methods and templates. In `page_order(player)`, `new_player`, `digest`,
+`pipeline`, and other app-level functions, write `Context(player)` instead.
 
 ## Chat Integration
 
@@ -474,8 +534,9 @@ Template: `{{ chat(session.chat) }}`
 6. Add to `main.py` with `load_config()`
 7. Add to `README.md` in the Apps table
 8. Write a `simulate.js`
-9. Run `black`, `isort`, `ruff`, and `mypy`, and fix issues rigorously and cleanly
+9. Run `black`, `isort`, `ruff`, and `mypy` (strict, as configured in new projects), and fix issues rigorously and cleanly
 10. Use 4-space indentation everywhere
+11. If the project has translation YAML files, run `uv run uproot check-translations`
 
 ## Common Paradigms
 
@@ -488,8 +549,14 @@ examples repository for similar apps before building from scratch.
 ## Testing
 
 ```bash
-uv run uproot run    # or: uproot run
+uv run uproot run                       # normal server; admin login link is printed
+uv run uproot start my_config           # also creates an open room and prints its URL
+uv run uproot start my_config --simulate  # same, with simulate.js enabled
 ```
+
+`uproot start` is the fastest way to try a config: open the printed room URL in
+one browser tab per participant. The config argument may be omitted if the
+project has exactly one config.
 
 After building or modifying an app, tell the user clearly how to correctly run
 the uproot server, and how to access the admin area from the browser.
