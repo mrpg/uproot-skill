@@ -312,9 +312,11 @@ def new_session(session: SessionType) -> None:
 
 **Note**: `rng` is exported from uproot.smithereens, and returns an independent
 `random.Random` object seeded from the OS. Always use `rng()` instead of the
-module-level `random` functions. If later draws must continue the same stream,
-store the generator itself on the player (`player.rng = rng()`); its state is
-persisted.
+module-level `random` functions. Call `rng()` directly wherever true,
+nonreplicable randomness is needed: every call is freshly seeded. For
+replicable randomness, create the generator once and store it, e.g.,
+`player.rng = rng()` (or similarly on a group or session), then draw from
+`player.rng`; its state is persisted, so later draws continue the same stream.
 
 **Reserved names.** Never use these as field or attribute names: `name` (the
 generated player name; use e.g. `participant_name`), `along`, `fields`, `flush`,

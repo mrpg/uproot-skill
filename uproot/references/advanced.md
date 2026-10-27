@@ -315,11 +315,18 @@ Both accept a session object or a `SessionIdentifier`.
 Use `rng()` for experiment randomization. It supplies a separately seeded
 `random.Random` instance. Do not use Python's process-global random generator.
 
+- **True, nonreplicable randomness**: call `rng()` directly. Every call is
+  freshly seeded from the OS.
+- **Replicable randomness**: store the generator, e.g., `player.rng = rng()`
+  (or similarly on a group or session), and draw from it. Its state is
+  persisted, so later draws continue the same stream.
+
 ```python
+# Nonreplicable: fresh generator per call
 items = list(item_list)
 rng().shuffle(items)
 
-# A stream that continues across pages: store the generator itself
+# Replicable: a stored stream that continues across pages
 player.rng = rng()
 player.bomb = player.rng.randint(1, 25)
 
