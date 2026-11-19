@@ -395,7 +395,7 @@ The built-in Alpine store exposes the page timeout:
 
 ### Bootstrap 5
 
-Bootstrap 5 CSS and JS (and Bootstrap Icons) are available on every page. The
+Bootstrap 5 CSS and JS are available on every page. The
 `bootstrap_elements` example is a guided tour of what is available. Use Bootstrap classes for
 layout, forms, buttons, cards, modals, alerts, and responsive design:
 
@@ -418,3 +418,21 @@ layout, forms, buttons, cards, modals, alerts, and responsive design:
     Important information here.
 </div>
 ```
+
+### Bootstrap Icons
+
+Bootstrap Icons ship with uproot but are **not** loaded on participant pages. Without
+the stylesheet, `<i class="bi ...">` renders as nothing and no error is shown. Load it
+in the page's `head` block:
+
+```html
+{% block head %}
+<link rel="stylesheet" href="{{ internalstatic('vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
+{% endblock head %}
+
+<i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i> Correct
+```
+
+To use icons throughout the project, put the same `<link>` in `ProjectHead.html`
+instead. For sizes, colours, variants, and accessibility, see
+`bootstrap_elements/Icons.html` in the examples repository.
